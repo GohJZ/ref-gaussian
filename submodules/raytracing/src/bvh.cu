@@ -23,6 +23,7 @@
 // }
 // #endif //NGP_OPTIX
 
+#include <array>
 #include <stack>
 #include <iostream>
 #include <cstdio>

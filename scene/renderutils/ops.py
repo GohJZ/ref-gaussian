@@ -28,6 +28,7 @@ def _get_plugin():
 
     # Make sure we can find the necessary compiler and libary binaries.
     if os.name == 'nt':
+        os.add_dll_directory(os.path.join(os.path.dirname(torch.__file__), 'lib'))
         def find_cl_path():
             import glob
             for edition in ['Enterprise', 'Professional', 'BuildTools', 'Community']:
@@ -43,7 +44,7 @@ def _get_plugin():
             os.environ['PATH'] += ';' + cl_path
 
     # Compiler options.
-    opts = ['-DNVDR_TORCH']
+    opts = ['-DNVDR_TORCH', '-D_DISABLE_STL_VECTORIZE_STRING_FUNCTIONS']
 
     # Linker options.
     if os.name == 'posix':
@@ -75,12 +76,15 @@ def _get_plugin():
 
     # Compile and load.
     source_paths = [os.path.join(os.path.dirname(__file__), fn) for fn in source_files]
-    torch.utils.cpp_extension.load(name='renderutils_plugin', sources=source_paths, extra_cflags=opts,
-         extra_cuda_cflags=opts, extra_ldflags=ldflags, with_cuda=True, verbose=True)
-
-    # Import, cache, and return the compiled module.
-    import renderutils_plugin
-    _cached_plugin = renderutils_plugin
+    _cached_plugin = torch.utils.cpp_extension.load(
+        name='renderutils_plugin',
+        sources=source_paths,
+        extra_cflags=opts,
+        extra_cuda_cflags=opts,
+        extra_ldflags=ldflags,
+        with_cuda=True,
+        verbose=True
+    )
     return _cached_plugin
 
 #----------------------------------------------------------------------------

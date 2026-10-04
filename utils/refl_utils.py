@@ -110,8 +110,24 @@ def get_specular_color_surfel(envmap: torch.Tensor, albedo, HWK, R, T, normal_ma
     rays_refl = safe_normalize(rays_refl)
 
     # Query BSDF
-    fg_uv = torch.cat([NdotV, roughness], -1).clamp(0, 1) 
-    fg = dr.texture(FG_LUT, fg_uv.reshape(1, -1, 1, 2).contiguous(), filter_mode="linear", boundary_mode="clamp").reshape(1, H, W, 2) 
+    fg_uv = torch.cat([NdotV, roughness], -1).clamp(0, 1)
+    fg_uv_flat = fg_uv.reshape(1, -1, 1, 2).contiguous()
+
+    chunk_size = 2_000_000
+    fg_chunks = []
+
+    for start in range(0, fg_uv_flat.shape[1], chunk_size):
+        end = min(start + chunk_size, fg_uv_flat.shape[1])
+        fg_chunks.append(
+            dr.texture(
+                FG_LUT,
+                fg_uv_flat[:, start:end],
+                filter_mode="linear",
+                boundary_mode="clamp"
+            )
+        )
+
+    fg = torch.cat(fg_chunks, dim=1).reshape(1, H, W, 2)
     # Compute direct light
     direct_light = envmap(rays_refl, roughness=roughness)
     specular_weight = ((0.04 * (1 - refl_strength) + albedo * refl_strength) * fg[0][..., 0:1] + fg[0][..., 1:2]) 

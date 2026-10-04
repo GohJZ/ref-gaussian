@@ -272,7 +272,10 @@ class GaussianExtractor(object):
         
         # coloring the mesh
         torch.cuda.empty_cache()
-        mesh = mesh.as_open3d
+        mesh = o3d.geometry.TriangleMesh(
+            vertices=o3d.utility.Vector3dVector(mesh.vertices.copy()),
+            triangles=o3d.utility.Vector3iVector(mesh.faces.copy()),
+        )
         print("texturing mesh ... ")
         _, rgbs = compute_unbounded_tsdf(torch.tensor(np.asarray(mesh.vertices)).float().cuda(), inv_contraction=None, voxel_size=voxel_size, return_rgb=True)
         mesh.vertex_colors = o3d.utility.Vector3dVector(rgbs.cpu().numpy())
