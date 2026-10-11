@@ -51,19 +51,26 @@ def get_env_rayd2(H,W):
 
 
 pixel_camera = None
+pixel_camera_key = None
 def sample_camera_rays(HWK, R, T):
     H,W,K = HWK
     R = R.T # NOTE!!! the R rot matrix is transposed save in 3DGS
     
-    global pixel_camera
-    if pixel_camera is None or pixel_camera.shape[0] != H:
-        K = K.astype(np.float32)
-        i, j = np.meshgrid(np.arange(W, dtype=np.float32),
-                        np.arange(H, dtype=np.float32),
-                        indexing='xy')
+    global pixel_camera, pixel_camera_key
+
+    K = K.astype(np.float32)
+    cache_key = (int(H), int(W), K.tobytes())
+
+    if pixel_camera is None or pixel_camera_key != cache_key:
+        i, j = np.meshgrid(
+            np.arange(W, dtype=np.float32),
+            np.arange(H, dtype=np.float32),
+            indexing='xy'
+        )
         xy1 = np.stack([i, j, np.ones_like(i)], axis=2)
         pixel_camera = np.dot(xy1, np.linalg.inv(K).T)
         pixel_camera = torch.tensor(pixel_camera).cuda()
+        pixel_camera_key = cache_key
 
     rays_o = (-R.T @ T.unsqueeze(-1)).flatten()
     pixel_world = (pixel_camera - T[None, None]).reshape(-1, 3) @ R
@@ -76,15 +83,21 @@ def sample_camera_rays_unnormalize(HWK, R, T):
     H,W,K = HWK
     R = R.T # NOTE!!! the R rot matrix is transposed save in 3DGS
     
-    global pixel_camera
-    if pixel_camera is None or pixel_camera.shape[0] != H:
-        K = K.astype(np.float32)
-        i, j = np.meshgrid(np.arange(W, dtype=np.float32),
-                        np.arange(H, dtype=np.float32),
-                        indexing='xy')
+    global pixel_camera, pixel_camera_key
+
+    K = K.astype(np.float32)
+    cache_key = (int(H), int(W), K.tobytes())
+
+    if pixel_camera is None or pixel_camera_key != cache_key:
+        i, j = np.meshgrid(
+            np.arange(W, dtype=np.float32),
+            np.arange(H, dtype=np.float32),
+            indexing='xy'
+        )
         xy1 = np.stack([i, j, np.ones_like(i)], axis=2)
         pixel_camera = np.dot(xy1, np.linalg.inv(K).T)
         pixel_camera = torch.tensor(pixel_camera).cuda()
+        pixel_camera_key = cache_key
 
     rays_o = (-R.T @ T.unsqueeze(-1)).flatten()
     pixel_world = (pixel_camera - T[None, None]).reshape(-1, 3) @ R
